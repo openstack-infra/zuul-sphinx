@@ -24,7 +24,6 @@ extensions = [
     'sphinx.ext.autodoc',
     #'sphinx.ext.intersphinx',
     'zuul_sphinx.zuul',
-    'oslosphinx'
 ]
 
 # autodoc generation is a bit aggressive and a nuisance when doing heavy
