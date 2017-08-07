@@ -30,6 +30,8 @@ extensions = [
 # text edit cycles.
 # execute "export SPHINX_DEBUG=1" in your terminal to disable
 
+primary_domain = 'zuul'
+
 # The suffix of source filenames.
 source_suffix = '.rst'
 

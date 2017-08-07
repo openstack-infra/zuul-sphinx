@@ -1,9 +1,9 @@
 .. include:: ../../README.rst
 
-
 .. toctree::
    :maxdepth: 2
 
+   examples
 
 Indices and tables
 ==================

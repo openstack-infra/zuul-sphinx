@@ -15,7 +15,10 @@
 from sphinx import addnodes
 from docutils.parsers.rst import Directive
 from sphinx.domains import Domain, ObjType
+from sphinx.roles import XRefRole
 from sphinx.directives import ObjectDescription
+from sphinx.util.nodes import make_refnode
+from docutils import nodes
 import os
 
 import yaml
@@ -26,7 +29,7 @@ class Layout(object):
         self.jobs = []
 
 
-class BaseZuulDirective(Directive):
+class ZuulDirective(Directive):
     has_content = True
 
     def find_zuul_yaml(self):
@@ -117,31 +120,235 @@ class BaseZuulDirective(Directive):
         return lines
 
 
-class ZuulJobDirective(BaseZuulDirective, ObjectDescription):
-    option_spec = {
-        'variant': lambda x: x,
+class ZuulObjectDescription(ZuulDirective, ObjectDescription):
+    object_names = {
+        'attr': 'attribute',
+        'var': 'variable',
     }
 
-    def handle_signature(self, sig, signode):
-        signode += addnodes.desc_name(sig, sig)
-        return sig
+    def get_path(self):
+        return self.env.ref_context.get('zuul:attr_path', [])
+
+    def get_display_path(self):
+        return self.env.ref_context.get('zuul:display_attr_path', [])
+
+    @property
+    def parent_pathname(self):
+        return '.'.join(self.get_display_path())
+
+    @property
+    def full_pathname(self):
+        name = self.names[-1].lower()
+        return '.'.join(self.get_path() + [name])
 
     def add_target_and_index(self, name, sig, signode):
-        targetname = self.objtype + '-' + name
-        if 'variant' in self.options:
-            targetname += '-' + self.options['variant']
+        targetname = self.objtype + '-' + self.full_pathname
         if targetname not in self.state.document.ids:
             signode['names'].append(targetname)
             signode['ids'].append(targetname)
             signode['first'] = (not self.names)
             self.state.document.note_explicit_target(signode)
+            objects = self.env.domaindata['zuul']['objects']
+            if targetname in objects:
+                self.state_machine.reporter.warning(
+                    'duplicate object description of %s, ' % targetname +
+                    'other instance in ' +
+                    self.env.doc2path(objects[targetname][0]) +
+                    ', use :noindex: for one of them',
+                    line=self.lineno)
+            objects[targetname] = (self.env.docname, self.objtype)
 
-        indextext = '%s (%s)' % (name, self.objtype)
+        objname = self.object_names.get(self.objtype, self.objtype)
+        if self.parent_pathname:
+            indextext = '%s (%s of %s)' % (name, objname,
+                                           self.parent_pathname)
+        else:
+            indextext = '%s (%s)' % (name, objname)
         self.indexnode['entries'].append(('single', indextext,
                                           targetname, '', None))
 
 
-class ZuulAutoJobDirective(BaseZuulDirective):
+######################################################################
+#
+# Object description directives
+#
+
+class ZuulJobDirective(ZuulObjectDescription):
+    option_spec = {
+        'variant': lambda x: x,
+    }
+
+    def before_content(self):
+        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+
+    def after_content(self):
+        path = self.env.ref_context.get('zuul:attr_path')
+        if path:
+            path.pop()
+
+    def handle_signature(self, sig, signode):
+        signode += addnodes.desc_name(sig, sig)
+        return sig
+
+
+class ZuulRoleDirective(ZuulObjectDescription):
+    def before_content(self):
+        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+
+    def after_content(self):
+        path = self.env.ref_context.get('zuul:attr_path')
+        if path:
+            path.pop()
+
+    def handle_signature(self, sig, signode):
+        signode += addnodes.desc_name(sig, sig)
+        return sig
+
+
+class ZuulAttrDirective(ZuulObjectDescription):
+    has_content = True
+
+    option_spec = {
+        'required': lambda x: x,
+        'default': lambda x: x,
+        'noindex': lambda x: x,
+    }
+
+    def before_content(self):
+        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        path.append(self.names[-1])
+        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        path.append(self.names[-1])
+
+    def after_content(self):
+        path = self.env.ref_context.get('zuul:attr_path')
+        if path:
+            path.pop()
+        path = self.env.ref_context.get('zuul:display_attr_path')
+        if path:
+            path.pop()
+
+    def handle_signature(self, sig, signode):
+        path = self.get_display_path()
+        signode['is_multiline'] = True
+        line = addnodes.desc_signature_line()
+        line['add_permalink'] = True
+        for x in path:
+            line += addnodes.desc_addname(x + '.', x + '.')
+        line += addnodes.desc_name(sig, sig)
+        if 'required' in self.options:
+            line += addnodes.desc_annotation(' (required)', ' (required)')
+        signode += line
+        if 'default' in self.options:
+            line = addnodes.desc_signature_line()
+            line += addnodes.desc_type('Default: ', 'Default: ')
+            line += nodes.literal(self.options['default'],
+                                  self.options['default'])
+            signode += line
+        return sig
+
+
+class ZuulValueDirective(ZuulObjectDescription):
+    has_content = True
+
+    def handle_signature(self, sig, signode):
+        signode += addnodes.desc_name(sig, sig)
+        return sig
+
+
+class ZuulVarDirective(ZuulObjectDescription):
+    has_content = True
+
+    option_spec = {
+        'type': lambda x: x,
+        'hidden': lambda x: x,
+        'noindex': lambda x: x,
+    }
+
+    type_map = {
+        'list': '[]',
+        'dict': '{}',
+    }
+
+    def get_type_str(self):
+        if 'type' in self.options:
+            return self.type_map[self.options['type']]
+        return ''
+
+    def before_content(self):
+        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        element = self.names[-1] + self.get_type_str()
+        path.append(element)
+
+    def after_content(self):
+        path = self.env.ref_context.get('zuul:attr_path')
+        if path:
+            path.pop()
+        path = self.env.ref_context.get('zuul:display_attr_path')
+        if path:
+            path.pop()
+
+    def handle_signature(self, sig, signode):
+        if 'hidden' in self.options:
+            return sig
+        path = self.get_display_path()
+        for x in path:
+            signode += addnodes.desc_addname(x + '.', x + '.')
+        signode += addnodes.desc_name(sig, sig)
+        return sig
+
+
+class ZuulStatDirective(ZuulObjectDescription):
+    has_content = True
+
+    option_spec = {
+        'type': lambda x: x,
+        'hidden': lambda x: x,
+        'noindex': lambda x: x,
+    }
+
+    def before_content(self):
+        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+        path = self.env.ref_context.setdefault('zuul:display_attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+
+    def after_content(self):
+        path = self.env.ref_context.get('zuul:attr_path')
+        if path:
+            path.pop()
+        path = self.env.ref_context.get('zuul:display_attr_path')
+        if path:
+            path.pop()
+
+    def handle_signature(self, sig, signode):
+        if 'hidden' in self.options:
+            return sig
+        path = self.get_display_path()
+        for x in path:
+            signode += addnodes.desc_addname(x + '.', x + '.')
+        signode += addnodes.desc_name(sig, sig)
+        if 'type' in self.options:
+            t = ' (%s)' % self.options['type']
+            signode += addnodes.desc_annotation(t, t)
+        return sig
+
+
+######################################################################
+#
+# Autodoc directives
+#
+
+class ZuulAutoJobDirective(ZuulDirective):
     def run(self):
         name = self.content[0]
         lines = self.generate_zuul_job_content(name)
@@ -149,7 +356,7 @@ class ZuulAutoJobDirective(BaseZuulDirective):
         return []
 
 
-class ZuulAutoJobsDirective(BaseZuulDirective):
+class ZuulAutoJobsDirective(ZuulDirective):
     has_content = False
 
     def run(self):
@@ -165,25 +372,7 @@ class ZuulAutoJobsDirective(BaseZuulDirective):
         return []
 
 
-class ZuulRoleDirective(BaseZuulDirective, ObjectDescription):
-    def handle_signature(self, sig, signode):
-        signode += addnodes.desc_name(sig, sig)
-        return sig
-
-    def add_target_and_index(self, name, sig, signode):
-        targetname = self.objtype + '-' + name
-        if targetname not in self.state.document.ids:
-            signode['names'].append(targetname)
-            signode['ids'].append(targetname)
-            signode['first'] = (not self.names)
-            self.state.document.note_explicit_target(signode)
-
-        indextext = '%s (%s)' % (name, self.objtype)
-        self.indexnode['entries'].append(('single', indextext,
-                                          targetname, '', None))
-
-
-class ZuulAutoRoleDirective(BaseZuulDirective):
+class ZuulAutoRoleDirective(ZuulDirective):
     def run(self):
         name = self.content[0]
         lines = self.generate_zuul_role_content(name)
@@ -191,7 +380,7 @@ class ZuulAutoRoleDirective(BaseZuulDirective):
         return []
 
 
-class ZuulAutoRolesDirective(BaseZuulDirective):
+class ZuulAutoRolesDirective(ZuulDirective):
     has_content = False
 
     def run(self):
@@ -202,29 +391,72 @@ class ZuulAutoRolesDirective(BaseZuulDirective):
         return []
 
 
+class ZuulAbbreviatedXRefRole(XRefRole):
+
+    def process_link(self, env, refnode, has_explicit_title, title,
+                     target):
+        title, target = super(ZuulAbbreviatedXRefRole, self).process_link(
+            env, refnode, has_explicit_title, title, target)
+        if not has_explicit_title:
+            title = title.split('.')[-1]
+        return title, target
+
+
 class ZuulDomain(Domain):
     name = 'zuul'
     label = 'Zuul'
 
-    object_types = {
-        'job': ObjType('job'),
-        'role': ObjType('role'),
-    }
-
     directives = {
+        # Object description directives
         'job': ZuulJobDirective,
+        'role': ZuulRoleDirective,
+        'attr': ZuulAttrDirective,
+        'value': ZuulValueDirective,
+        'var': ZuulVarDirective,
+        'stat': ZuulStatDirective,
+        # Autodoc directives
         'autojob': ZuulAutoJobDirective,
         'autojobs': ZuulAutoJobsDirective,
-        'role': ZuulRoleDirective,
         'autorole': ZuulAutoRoleDirective,
         'autoroles': ZuulAutoRolesDirective,
+    }
+
+    roles = {
+        'job': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                        warn_dangling=True),
+        'role': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                         warn_dangling=True),
+        'attr': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                         warn_dangling=True),
+        'value': ZuulAbbreviatedXRefRole(
+            innernodeclass=nodes.inline,  # type: ignore
+            warn_dangling=True),
+        'var': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                        warn_dangling=True),
+        'stat': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                         warn_dangling=True),
     }
 
     initial_data = {
         'layout': None,
         'layout_path': None,
         'role_paths': None,
-    }
+        'objects': {},
+    }  # type: Dict[str, Dict]
+
+    def resolve_xref(self, env, fromdocname, builder, type, target,
+                     node, contnode):
+        objects = self.data['objects']
+        name = type + '-' + target
+        obj = objects.get(name)
+        if obj:
+            return make_refnode(builder, fromdocname, obj[0], name,
+                                contnode, name)
+
+    def clear_doc(self, docname):
+        for fullname, (fn, _l) in list(self.data['objects'].items()):
+            if fn == docname:
+                del self.data['objects'][fullname]
 
 
 def setup(app):
