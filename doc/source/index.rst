@@ -4,6 +4,7 @@
    :maxdepth: 2
 
    examples
+   contributor/index
 
 Indices and tables
 ==================
