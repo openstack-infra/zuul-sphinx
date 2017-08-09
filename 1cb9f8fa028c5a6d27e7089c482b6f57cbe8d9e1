@@ -1,0 +1,8 @@
+Code-Review+2: James E. Blair <corvus@inaugust.com>
+Workflow+1: James E. Blair <corvus@inaugust.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Wed, 09 Aug 2017 19:46:19 +0000
+Reviewed-on: https://review.openstack.org/492203
+Project: openstack-infra/zuul-sphinx
+Branch: refs/heads/master
