@@ -124,6 +124,8 @@ class ZuulObjectDescription(ZuulDirective, ObjectDescription):
     object_names = {
         'attr': 'attribute',
         'var': 'variable',
+        'jobvar': 'job variable',
+        'rolevar': 'role variable',
     }
 
     def get_path(self):
@@ -265,6 +267,7 @@ class ZuulVarDirective(ZuulObjectDescription):
 
     option_spec = {
         'type': lambda x: x,
+        'default': lambda x: x,
         'hidden': lambda x: x,
         'noindex': lambda x: x,
     }
@@ -299,10 +302,30 @@ class ZuulVarDirective(ZuulObjectDescription):
         if 'hidden' in self.options:
             return sig
         path = self.get_display_path()
+        signode['is_multiline'] = True
+        line = addnodes.desc_signature_line()
+        line['add_permalink'] = True
         for x in path:
-            signode += addnodes.desc_addname(x + '.', x + '.')
-        signode += addnodes.desc_name(sig, sig)
+            line += addnodes.desc_addname(x + '.', x + '.')
+        line += addnodes.desc_name(sig, sig)
+        if 'required' in self.options:
+            line += addnodes.desc_annotation(' (required)', ' (required)')
+        signode += line
+        if 'default' in self.options:
+            line = addnodes.desc_signature_line()
+            line += addnodes.desc_type('Default: ', 'Default: ')
+            line += nodes.literal(self.options['default'],
+                                  self.options['default'])
+            signode += line
         return sig
+
+
+class ZuulJobVarDirective(ZuulVarDirective):
+    pass
+
+
+class ZuulRoleVarDirective(ZuulVarDirective):
+    pass
 
 
 class ZuulStatDirective(ZuulObjectDescription):
@@ -414,6 +437,8 @@ class ZuulDomain(Domain):
         'value': ZuulValueDirective,
         'var': ZuulVarDirective,
         'stat': ZuulStatDirective,
+        'jobvar': ZuulJobVarDirective,
+        'rolevar': ZuulRoleVarDirective,
         # Autodoc directives
         'autojob': ZuulAutoJobDirective,
         'autojobs': ZuulAutoJobsDirective,
@@ -435,6 +460,10 @@ class ZuulDomain(Domain):
                         warn_dangling=True),
         'stat': XRefRole(innernodeclass=nodes.inline,  # type: ignore
                          warn_dangling=True),
+        'jobvar': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                           warn_dangling=True),
+        'rolevar': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                            warn_dangling=True),
     }
 
     initial_data = {
