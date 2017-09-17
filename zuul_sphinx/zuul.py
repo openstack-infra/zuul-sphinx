@@ -35,7 +35,7 @@ class ZuulDirective(Directive):
     def find_zuul_yaml(self):
         root = self.state.document.settings.env.relfn2path('.')[1]
         while root:
-            for fn in ['zuul.yaml', '.zuul.yaml']:
+            for fn in ['zuul.yaml', '.zuul.yaml', 'zuul.d', '.zuul.d']:
                 path = os.path.join(root, fn)
                 if os.path.exists(path):
                     return path
@@ -51,11 +51,24 @@ class ZuulDirective(Directive):
                 layout.jobs.append(obj['job'])
         return layout
 
+    def parse_zuul_d(self, path):
+        layout = Layout()
+        for conf in os.listdir(path):
+            with open(os.path.join(path, conf)) as f:
+                data = yaml.safe_load(f)
+            for obj in data:
+                if 'job' in obj:
+                    layout.jobs.append(obj['job'])
+        return layout
+
     def _parse_zuul_layout(self):
         env = self.state.document.settings.env
         if not env.domaindata['zuul']['layout']:
             path = self.find_zuul_yaml()
-            layout = self.parse_zuul_yaml(path)
+            if path.endswith('zuul.d'):
+                layout = self.parse_zuul_d(path)
+            else:
+                layout = self.parse_zuul_yaml(path)
             env.domaindata['zuul']['layout_path'] = path
             env.domaindata['zuul']['layout'] = layout
 
