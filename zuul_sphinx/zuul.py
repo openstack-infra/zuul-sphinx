@@ -40,7 +40,9 @@ class ZuulDirective(Directive):
                 if os.path.exists(path):
                     return path
             root = os.path.split(root)[0]
-        raise Exception("Unable to find zuul.yaml or .zuul.yaml")
+        raise Exception(
+            "Unable to find zuul config in zuul.yaml, .zuul.yaml,"
+            " zuul.d or .zuul.d")
 
     def parse_zuul_yaml(self, path):
         with open(path) as f:
