@@ -12,6 +12,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from collections import OrderedDict
+import os
+
 from sphinx import addnodes
 from docutils.parsers.rst import Directive
 from sphinx.domains import Domain, ObjType
@@ -19,14 +22,37 @@ from sphinx.roles import XRefRole
 from sphinx.directives import ObjectDescription
 from sphinx.util.nodes import make_refnode
 from docutils import nodes
-import os
 
 import yaml
+
+
+class ProjectTemplate(object):
+    def __init__(self, conf):
+        self.name = conf['name']
+        self.description = conf.get('description', '')
+        self.pipelines = OrderedDict()
+        self.parse(conf)
+
+    def parse(self, conf):
+        for k in sorted(conf.keys()):
+            v = conf[k]
+            if not isinstance(v, dict):
+                continue
+            if 'jobs' not in v:
+                continue
+            jobs = []
+            for job in v['jobs']:
+                if isinstance(job, dict):
+                    job = list(dict.keys())[0]
+                jobs.append(job)
+            if jobs:
+                self.pipelines[k] = jobs
 
 
 class Layout(object):
     def __init__(self):
         self.jobs = []
+        self.project_templates = []
 
 
 class ZuulDirective(Directive):
@@ -51,6 +77,9 @@ class ZuulDirective(Directive):
         for obj in data:
             if 'job' in obj:
                 layout.jobs.append(obj['job'])
+            if 'project-template' in obj:
+                layout.project_templates.append(
+                    ProjectTemplate(obj['project-template']))
         return layout
 
     def parse_zuul_d(self, path):
@@ -61,6 +90,9 @@ class ZuulDirective(Directive):
             for obj in data:
                 if 'job' in obj:
                     layout.jobs.append(obj['job'])
+                if 'project-template' in obj:
+                    layout.project_templates.append(
+                        ProjectTemplate(obj['project-template']))
         return layout
 
     def _parse_zuul_layout(self):
@@ -100,6 +132,22 @@ class ZuulDirective(Directive):
                 lines.append('')
                 for l in job.get('description', '').split('\n'):
                     lines.append('   ' + l)
+                lines.append('')
+        return lines
+
+    def generate_zuul_project_template_content(self, name):
+        lines = []
+        for template in self.zuul_layout.project_templates:
+            if template.name == name:
+                lines.append('.. zuul:project_template:: %s' % name)
+                lines.append('')
+                for l in template.description.split('\n'):
+                    lines.append('   ' + l)
+                for pipeline, jobs in template.pipelines.items():
+                    lines.append('')
+                    lines.append('   **'+pipeline+'**')
+                    for job in jobs:
+                        lines.append('      * :zuul:xjob:`' + job + '`')
                 lines.append('')
         return lines
 
@@ -195,6 +243,22 @@ class ZuulJobDirective(ZuulObjectDescription):
         'variant': lambda x: x,
     }
 
+    def before_content(self):
+        path = self.env.ref_context.setdefault('zuul:attr_path', [])
+        element = self.names[-1]
+        path.append(element)
+
+    def after_content(self):
+        path = self.env.ref_context.get('zuul:attr_path')
+        if path:
+            path.pop()
+
+    def handle_signature(self, sig, signode):
+        signode += addnodes.desc_name(sig, sig)
+        return sig
+
+
+class ZuulProjectTemplateDirective(ZuulObjectDescription):
     def before_content(self):
         path = self.env.ref_context.setdefault('zuul:attr_path', [])
         element = self.names[-1]
@@ -409,6 +473,29 @@ class ZuulAutoJobsDirective(ZuulDirective):
         self.state_machine.insert_input(lines, self.zuul_layout_path)
         return []
 
+class ZuulAutoProjectTemplateDirective(ZuulDirective):
+    def run(self):
+        name = self.content[0]
+        lines = self.generate_zuul_project_template_content(name)
+        self.state_machine.insert_input(lines, self.zuul_layout_path)
+        return []
+
+
+class ZuulAutoProjectTemplatesDirective(ZuulDirective):
+    has_content = False
+
+    def run(self):
+        lines = []
+        names = set()
+        for template in self.zuul_layout.project_templates:
+            name = template.name
+            if name in names:
+                continue
+            lines.extend(self.generate_zuul_project_template_content(name))
+            names.add(name)
+        self.state_machine.insert_input(lines, self.zuul_layout_path)
+        return []
+
 
 class ZuulAutoRoleDirective(ZuulDirective):
     def run(self):
@@ -447,6 +534,7 @@ class ZuulDomain(Domain):
     directives = {
         # Object description directives
         'job': ZuulJobDirective,
+        'project_template': ZuulProjectTemplateDirective,
         'role': ZuulRoleDirective,
         'attr': ZuulAttrDirective,
         'value': ZuulValueDirective,
@@ -457,6 +545,8 @@ class ZuulDomain(Domain):
         # Autodoc directives
         'autojob': ZuulAutoJobDirective,
         'autojobs': ZuulAutoJobsDirective,
+        'autoproject_template': ZuulAutoProjectTemplateDirective,
+        'autoproject_templates': ZuulAutoProjectTemplatesDirective,
         'autorole': ZuulAutoRoleDirective,
         'autoroles': ZuulAutoRolesDirective,
     }
@@ -464,6 +554,11 @@ class ZuulDomain(Domain):
     roles = {
         'job': XRefRole(innernodeclass=nodes.inline,  # type: ignore
                         warn_dangling=True),
+        'xjob': XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                         warn_dangling=False),
+        'project_template':
+            XRefRole(innernodeclass=nodes.inline,  # type: ignore
+                     warn_dangling=True),
         'role': XRefRole(innernodeclass=nodes.inline,  # type: ignore
                          warn_dangling=True),
         'attr': XRefRole(innernodeclass=nodes.inline,  # type: ignore
@@ -491,6 +586,8 @@ class ZuulDomain(Domain):
     def resolve_xref(self, env, fromdocname, builder, type, target,
                      node, contnode):
         objects = self.data['objects']
+        if type == 'xjob':
+            type = 'job'
         name = type + '-' + target
         obj = objects.get(name)
         if obj:

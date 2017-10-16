@@ -5,7 +5,9 @@
 
    examples
    example-jobs
+   example-templates
    example-roles
+   example-autodoc
 
 Indices and tables
 ==================
