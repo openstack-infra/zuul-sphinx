@@ -43,7 +43,7 @@ class ProjectTemplate(object):
             jobs = []
             for job in v['jobs']:
                 if isinstance(job, dict):
-                    job = list(dict.keys())[0]
+                    job = list(job.keys())[0]
                 jobs.append(job)
             if jobs:
                 self.pipelines[k] = jobs

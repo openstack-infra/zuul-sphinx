@@ -17,8 +17,12 @@
       jobs:
         - test-autodoc
         - example
-        - does-not-exist-in-this-repo
+        - does-not-exist-in-this-repo:
+            required-projects:
+              - some-project
     gate:
       jobs:
         - example
-        - does-not-exist-in-this-repo
+        - does-not-exist-in-this-repo:
+            required-projects:
+              - some-project
