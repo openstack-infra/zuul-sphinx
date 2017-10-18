@@ -1,0 +1,8 @@
+Code-Review+2: Clark Boylan <cboylan@sapwetik.org>
+Workflow+1: Clark Boylan <cboylan@sapwetik.org>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Wed, 18 Oct 2017 23:19:30 +0000
+Reviewed-on: https://review.openstack.org/513201
+Project: openstack-infra/zuul-sphinx
+Branch: refs/heads/master
