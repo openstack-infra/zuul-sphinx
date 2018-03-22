@@ -1,0 +1,5 @@
+- project:
+    post:
+      jobs:
+        - publish-zuul-docs
+        - publish-openstack-sphinx-docs-infra
