@@ -1,0 +1,4 @@
+- project:
+    post:
+      - publish-zuul-docs
+      - publish-openstack-sphinx-docs-infra
