@@ -1,4 +1,10 @@
 - project:
+    check:
+      jobs:
+        - build-sphinx-docs
+    gate:
+      jobs:
+        - build-sphinx-docs
     post:
       jobs:
         - publish-zuul-docs
