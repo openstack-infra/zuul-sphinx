@@ -26,6 +26,17 @@ from docutils import nodes
 import yaml
 
 
+class ZuulSafeLoader(yaml.SafeLoader):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_multi_constructor('!encrypted/', self.construct_encrypted)
+
+    @classmethod
+    def construct_encrypted(cls, loader, tag_suffix, node):
+        return loader.construct_sequence(node)
+
+
 class ProjectTemplate(object):
     def __init__(self, conf):
         self.name = conf['name']
@@ -72,7 +83,7 @@ class ZuulDirective(Directive):
 
     def parse_zuul_yaml(self, path):
         with open(path) as f:
-            data = yaml.safe_load(f)
+            data = yaml.load(f, Loader=ZuulSafeLoader)
         layout = Layout()
         for obj in data:
             if 'job' in obj:
@@ -86,7 +97,7 @@ class ZuulDirective(Directive):
         layout = Layout()
         for conf in os.listdir(path):
             with open(os.path.join(path, conf)) as f:
-                data = yaml.safe_load(f)
+                data = yaml.load(f, Loader=ZuulSafeLoader)
             for obj in data:
                 if 'job' in obj:
                     layout.jobs.append(obj['job'])
