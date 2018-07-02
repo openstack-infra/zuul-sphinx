@@ -13,6 +13,7 @@
 # under the License.
 
 from collections import OrderedDict
+import codecs
 import os
 
 from sphinx import addnodes
@@ -187,7 +188,7 @@ class ZuulDirective(Directive):
         lines.append('.. zuul:role:: %s' % name)
         lines.append('')
         role_readme = self.zuul_role_paths[name]
-        with open(role_readme) as f:
+        with codecs.open(role_readme, encoding='utf-8') as f:
             role_lines = f.read().split('\n')
             for l in role_lines:
                 lines.append('   ' + l)
