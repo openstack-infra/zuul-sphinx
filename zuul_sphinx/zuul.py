@@ -163,14 +163,20 @@ class ZuulDirective(Directive):
         return lines
 
     def find_zuul_roles(self):
-        root = os.path.dirname(self.zuul_layout_path)
-        roledir = os.path.join(root, 'roles')
         env = self.state.document.settings.env
+        _root = os.path.dirname(self.zuul_layout_path)
+        root_roledir = os.path.join(_root, 'roles')
+        role_dirs = []
+        if os.path.isdir(root_roledir):
+            role_dirs = [root_roledir,]
+        if env.config.zuul_role_paths:
+            role_dirs.extend(env.config.zuul_role_paths)
         roles = env.domaindata['zuul']['role_paths']
-        for p in os.listdir(roledir):
-            role_readme = os.path.join(roledir, p, 'README.rst')
-            if os.path.exists(role_readme):
-                roles[p] = role_readme
+        for d in role_dirs:
+            for p in os.listdir(d):
+                role_readme = os.path.join(d, p, 'README.rst')
+                if os.path.exists(role_readme):
+                    roles[p] = role_readme
 
     @property
     def zuul_role_paths(self):
@@ -612,4 +618,5 @@ class ZuulDomain(Domain):
 
 
 def setup(app):
+    app.add_config_value('zuul_role_paths', [], 'html')
     app.add_domain(ZuulDomain)
