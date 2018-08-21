@@ -1,0 +1,9 @@
+Code-Review+2: James E. Blair <corvus@inaugust.com>
+Code-Review+2: Monty Taylor <mordred@inaugust.com>
+Workflow+1: Monty Taylor <mordred@inaugust.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 21 Aug 2018 21:30:14 +0000
+Reviewed-on: https://review.openstack.org/593477
+Project: openstack-infra/zuul-sphinx
+Branch: refs/heads/master
