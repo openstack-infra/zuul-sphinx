@@ -1,10 +1,6 @@
 - project:
-    check:
-      jobs:
-        - build-sphinx-docs
-    gate:
-      jobs:
-        - build-sphinx-docs
+    templates:
+      - build-tox-docs
     post:
       jobs:
         - publish-zuul-docs
