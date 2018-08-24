@@ -10,3 +10,8 @@ Auto Project Templates
 ----------------------
 
 .. autoproject_templates::
+
+Auto Roles
+----------
+
+.. autoroles::

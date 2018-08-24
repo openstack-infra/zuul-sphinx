@@ -19,12 +19,17 @@ import os
 from sphinx import addnodes
 from docutils.parsers.rst import Directive
 from sphinx.domains import Domain, ObjType
+from sphinx.errors import SphinxError
 from sphinx.roles import XRefRole
 from sphinx.directives import ObjectDescription
+from sphinx.util import logging
 from sphinx.util.nodes import make_refnode
 from docutils import nodes
 
 import yaml
+
+
+logger = logging.getLogger(__name__)
 
 
 class ZuulSafeLoader(yaml.SafeLoader):
@@ -78,7 +83,7 @@ class ZuulDirective(Directive):
                 if os.path.exists(path):
                     return path
             root = os.path.split(root)[0]
-        raise Exception(
+        raise SphinxError(
             "Unable to find zuul config in zuul.yaml, .zuul.yaml,"
             " zuul.d or .zuul.d")
 
@@ -178,6 +183,12 @@ class ZuulDirective(Directive):
                 role_readme = os.path.join(d, p, 'README.rst')
                 if os.path.exists(role_readme):
                     roles[p] = role_readme
+                else:
+                    msg = "Missing role documentation: %s" % role_readme
+                    if env.config.zuul_autoroles_warn_missing:
+                        logger.warning(msg)
+                    else:
+                        logger.debug(msg)
 
     @property
     def zuul_role_paths(self):
@@ -620,4 +631,5 @@ class ZuulDomain(Domain):
 
 def setup(app):
     app.add_config_value('zuul_role_paths', [], 'html')
+    app.add_config_value('zuul_autoroles_warn_missing', True, '')
     app.add_domain(ZuulDomain)
