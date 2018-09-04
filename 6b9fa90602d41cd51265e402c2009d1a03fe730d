@@ -1,0 +1,9 @@
+Code-Review+2: Tobias Henkel <tobias.henkel@bmw.de>
+Code-Review+2: James E. Blair <corvus@inaugust.com>
+Workflow+1: James E. Blair <corvus@inaugust.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 04 Sep 2018 22:46:56 +0000
+Reviewed-on: https://review.openstack.org/599469
+Project: openstack-infra/zuul-sphinx
+Branch: refs/heads/master
