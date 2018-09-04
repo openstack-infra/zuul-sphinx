@@ -491,15 +491,17 @@ class ZuulAutoJobsDirective(ZuulDirective):
     has_content = False
 
     def run(self):
-        lines = []
+        env = self.state.document.settings.env
         names = set()
         for job in self.zuul_layout.jobs:
             name = job['name']
             if name in names:
                 continue
-            lines.extend(self.generate_zuul_job_content(name))
+            lines = self.generate_zuul_job_content(name)
+            location = 'Job "%s" included in %s' % \
+                (name, env.doc2path(env.docname))
+            self.state_machine.insert_input(lines, location)
             names.add(name)
-        self.state_machine.insert_input(lines, self.zuul_layout_path)
         return []
 
 class ZuulAutoProjectTemplateDirective(ZuulDirective):
@@ -514,15 +516,17 @@ class ZuulAutoProjectTemplatesDirective(ZuulDirective):
     has_content = False
 
     def run(self):
-        lines = []
+        env = self.state.document.settings.env
         names = set()
         for template in self.zuul_layout.project_templates:
             name = template.name
             if name in names:
                 continue
-            lines.extend(self.generate_zuul_project_template_content(name))
+            lines = self.generate_zuul_project_template_content(name)
+            location = 'Template "%s" included in %s' % \
+                (name, env.doc2path(env.docname))
+            self.state_machine.insert_input(lines, location)
             names.add(name)
-        self.state_machine.insert_input(lines, self.zuul_layout_path)
         return []
 
 
