@@ -180,6 +180,8 @@ class ZuulDirective(Directive):
         roles = env.domaindata['zuul']['role_paths']
         for d in role_dirs:
             for p in os.listdir(d):
+                if not os.path.isdir(os.path.join(d, p)):
+                    continue
                 role_readme = os.path.join(d, p, 'README.rst')
                 if os.path.exists(role_readme):
                     roles[p] = role_readme
