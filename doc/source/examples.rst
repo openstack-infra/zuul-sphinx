@@ -11,6 +11,8 @@ Configuration Attributes
 
    .. attr:: foo
       :default: bar
+      :example: sample_value_for_example_attr
+      :type: str
 
       A sub attribute.
 

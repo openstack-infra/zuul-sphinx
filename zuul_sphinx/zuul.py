@@ -328,6 +328,8 @@ class ZuulAttrDirective(ZuulObjectDescription):
         'required': lambda x: x,
         'default': lambda x: x,
         'noindex': lambda x: x,
+        'example': lambda x: x,
+        'type': lambda x: x,
     }
 
     def before_content(self):
@@ -346,11 +348,14 @@ class ZuulAttrDirective(ZuulObjectDescription):
 
     def handle_signature(self, sig, signode):
         path = self.get_display_path()
+        print(path)
         signode['is_multiline'] = True
         line = addnodes.desc_signature_line()
         line['add_permalink'] = True
         for x in path:
+            print(x)
             line += addnodes.desc_addname(x + '.', x + '.')
+        print("---")
         line += addnodes.desc_name(sig, sig)
         if 'required' in self.options:
             line += addnodes.desc_annotation(' (required)', ' (required)')
@@ -360,6 +365,18 @@ class ZuulAttrDirective(ZuulObjectDescription):
             line += addnodes.desc_type('Default: ', 'Default: ')
             line += nodes.literal(self.options['default'],
                                   self.options['default'])
+            signode += line
+        if 'example' in self.options:
+            line = addnodes.desc_signature_line()
+            line += addnodes.desc_type('Example: ', 'Example: ')
+            line += nodes.literal(self.options['example'],
+                                  self.options['example'])
+            signode += line
+        if 'type' in self.options:
+            line = addnodes.desc_signature_line()
+            line += addnodes.desc_type('Type: ', 'Type: ')
+            line += nodes.emphasis(self.options['type'],
+                                   self.options['type'])
             signode += line
         return sig
 
