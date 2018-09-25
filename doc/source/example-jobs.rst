@@ -1,8 +1,5 @@
-Example Jobs
-============
-
 Jobs
-----
+====
 
 .. job:: example
 
