@@ -615,7 +615,7 @@ class ZuulDomain(Domain):
         'layout': None,
         'layout_path': None,
         'role_paths': None,
-        'objects': {},
+        'objects': OrderedDict(),
     }  # type: Dict[str, Dict]
 
     def resolve_xref(self, env, fromdocname, builder, type, target,
