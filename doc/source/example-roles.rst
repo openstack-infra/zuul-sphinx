@@ -1,8 +1,5 @@
-Example Roles
-=============
-
 Roles
------
+=====
 
 .. role:: example
 
