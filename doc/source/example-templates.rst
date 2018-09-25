@@ -1,8 +1,5 @@
-Example Project Templates
-=========================
-
 Project Templates
------------------
+=================
 
 .. project_template:: example
 

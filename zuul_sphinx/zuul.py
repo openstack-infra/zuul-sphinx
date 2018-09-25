@@ -17,7 +17,9 @@ import codecs
 import os
 
 from sphinx import addnodes
+from docutils import nodes
 from docutils.parsers.rst import Directive
+from docutils.parsers.rst import directives
 from sphinx.domains import Domain, ObjType
 from sphinx.errors import SphinxError
 from sphinx.roles import XRefRole
@@ -649,7 +651,104 @@ class ZuulDomain(Domain):
                 del self.data['objects'][fullname]
 
 
+######################################################################
+#
+# Attribute overview directives
+#
+
+# TODO(ianw)
+#
+# There are many ways this could be improved
+#  * fancy indentation of nested attrs in the overview
+#  * (related) stripping of prefixes for nesting
+#  * something better than a bullet list (table?)
+#  * add something to attributes so that they can list thier child
+#    attributes atuomatically.  Something like
+#
+#    .. attr:: foo
+#       :show_overview:
+#
+#       This is the foo option
+#
+#    and then
+#
+#       .. attr-overview::
+#          :maxdepth: 1
+#          :prefix: foo
+#
+#    gets automatically inserted for you, and then you should have a
+#    sensible overview of the sub-options of "foo" inside the
+#    top-level "foo" documentation
+#  * figure out if it could be added to TOC
+
+class attroverview(nodes.General, nodes.Element):
+    pass
+
+class AttrOverviewDirective(Directive):
+    option_arguments = 2
+    option_spec = {
+        'maxdepth': directives.positive_int,
+        'prefix': directives.unchanged
+    }
+
+    def run(self):
+        attr = attroverview('')
+        if 'maxdepth' in self.options:
+            attr._maxdepth = self.options['maxdepth']
+        if 'prefix' in self.options:
+            attr._prefix = self.options['prefix']
+        return [attr]
+
+
+def process_attr_overview(app, doctree, fromdocname):
+    objects = app.builder.env.domaindata['zuul']['objects']
+
+    for node in doctree.traverse(attroverview):
+        content = []
+
+        l = nodes.bullet_list()
+        content.append(l)
+        # The "..attr" calls have built up this dictionary, of the format
+        #
+        # {
+        #   attr-foo : (docname, attr),
+        #   attr-foo.bar : (docname, attr),
+        # }
+        #
+        # So, in words, we look at all items in this list that have
+        # our docname and the attr "type" (second argument) and build
+        # them into a bullet list.
+        for k,v in objects.items():
+            if v[0] == fromdocname and v[1] == 'attr':
+                # remove the leading "attr-" for the link name ... the
+                # whole thing is is the refid however.
+                name = k[5:]
+
+                # e.g. if we have foo.bar.baz that's considered 3
+                # levels
+                if getattr(node, '_maxdepth', None):
+                    maxdepth = node._maxdepth
+                    if len(name.split('.')) > maxdepth:
+                        continue
+
+                if getattr(node, '_prefix', None):
+                    prefix = node._prefix
+                    if not name.startswith(prefix.strip()):
+                        continue
+
+                item = nodes.list_item()
+                para = nodes.paragraph()
+                refnode = nodes.reference(name, name, internal=True, refid=k)
+                para.append(refnode)
+                item.append(para)
+                l.append(item)
+
+        node.replace_self(content)
+
+
 def setup(app):
     app.add_config_value('zuul_role_paths', [], 'html')
     app.add_config_value('zuul_autoroles_warn_missing', True, '')
+    app.add_directive('attr-overview', AttrOverviewDirective)
+    app.connect('doctree-resolved', process_attr_overview)
     app.add_domain(ZuulDomain)
