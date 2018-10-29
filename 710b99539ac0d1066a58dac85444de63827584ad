@@ -1,0 +1,10 @@
+Code-Review+2: Tobias Henkel <tobias.henkel@bmw.de>
+Code-Review+1: wangqi <wang.qi@99cloud.net>
+Code-Review+2: Jeremy Stanley <fungi@yuggoth.org>
+Workflow+1: Jeremy Stanley <fungi@yuggoth.org>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Mon, 29 Oct 2018 12:25:29 +0000
+Reviewed-on: https://review.openstack.org/602252
+Project: openstack-infra/zuul-sphinx
+Branch: refs/heads/master
