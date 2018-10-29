@@ -1,6 +1,10 @@
 - project:
-    templates:
-      - build-tox-docs
+    check:
+      jobs:
+        - tox-docs
+    gate:
+      jobs:
+        - tox-docs
     post:
       jobs:
         - publish-zuul-docs
