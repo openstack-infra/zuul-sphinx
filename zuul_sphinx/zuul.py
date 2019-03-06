@@ -404,7 +404,7 @@ class ZuulVarDirective(ZuulObjectDescription):
     }
 
     def get_type_str(self):
-        if 'type' in self.options:
+        if 'type' in self.options and self.options['type'] in self.type_map:
             return self.type_map[self.options['type']]
         return ''
 
@@ -442,6 +442,12 @@ class ZuulVarDirective(ZuulObjectDescription):
             line += addnodes.desc_type('Default: ', 'Default: ')
             line += nodes.literal(self.options['default'],
                                   self.options['default'])
+            signode += line
+        if 'type' in self.options:
+            line = addnodes.desc_signature_line()
+            line += addnodes.desc_type('Type: ', 'Type: ')
+            line += nodes.emphasis(self.options['type'],
+                                   self.options['type'])
             signode += line
         return sig
 
