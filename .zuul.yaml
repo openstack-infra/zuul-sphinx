@@ -8,3 +8,6 @@
     promote:
       jobs:
         - zuul-promote-docs
+    release:
+      jobs:
+        - zuul-publish-tox-docs
