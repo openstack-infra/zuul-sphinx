@@ -104,8 +104,12 @@ class ZuulDirective(Directive):
     def parse_zuul_d(self, path):
         layout = Layout()
         for conf in os.listdir(path):
-            with open(os.path.join(path, conf)) as f:
+            conf_path = os.path.join(path, conf)
+            with open(conf_path) as f:
                 data = yaml.load(f, Loader=ZuulSafeLoader)
+            if data is None:
+                raise SphinxError(
+                    "File %s in Zuul dir is empty", conf_path)
             for obj in data:
                 if 'job' in obj:
                     layout.jobs.append(obj['job'])
