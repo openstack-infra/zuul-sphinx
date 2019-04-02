@@ -11,3 +11,4 @@
     release:
       jobs:
         - zuul-publish-tox-docs
+        - opendev-release-python
